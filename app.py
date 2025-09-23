@@ -1,0 +1,134 @@
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for
+from flask import Flask, render_template
+import sqlite3
+import hashlib
+import os
+from datetime import datetime
+
+app = Flask(__name__)
+app.secret_key = 'your-super-secure-secret-key-change-this-to-something-random-and-long-2024'
+
+# Create instance directory for database
+INSTANCE_PATH = os.path.join(os.path.dirname(__file__), 'instance')
+os.makedirs(INSTANCE_PATH, exist_ok=True)
+app.config['DATABASE_PATH'] = os.path.join(INSTANCE_PATH, 'ecommerce.db')
+
+class DatabaseManager:
+    def __init__(self, db_path=None):
+        self.db_path = db_path or app.config['DATABASE_PATH']
+        self.init_database()
+    
+    def init_database(self):
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        # Users table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username VARCHAR(50) UNIQUE NOT NULL,
+                email VARCHAR(100) UNIQUE NOT NULL,
+                password_hash VARCHAR(255) NOT NULL,
+                role VARCHAR(20) DEFAULT 'customer',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
+        # Products table (basic structure for Week 2)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS products (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name VARCHAR(100) NOT NULL,
+                description TEXT,
+                price DECIMAL(10,2) NOT NULL,
+                stock INTEGER NOT NULL,
+                is_active BOOLEAN DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
+        # Create default admin user
+        admin_password = self.hash_password("admin123")
+        cursor.execute('''
+            INSERT OR IGNORE INTO users (username, email, password_hash, role)
+            VALUES (?, ?, ?, ?)
+        ''', ("admin", "admin@ecommerce.com", admin_password, "admin"))
+        
+        conn.commit()
+        conn.close()
+    
+    def hash_password(self, password):
+        return hashlib.sha256(password.encode()).hexdigest()
+    
+    def execute_query(self, query, params=None):
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        if params:
+            cursor.execute(query, params)
+        else:
+            cursor.execute(query)
+        
+        result = cursor.fetchall()
+        conn.commit()
+        conn.close()
+        return result
+
+# Initialize database
+db = DatabaseManager()
+
+@app.route('/')
+def home():
+    return render_template('index.html')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        data = request.get_json()
+        username = data.get('username')
+        password = data.get('password')
+        
+        if not username or not password:
+            return jsonify({'success': False, 'message': 'Please fill in all fields'})
+        
+        # Hash password for comparison
+        password_hash = db.hash_password(password)
+        
+        user_data = db.execute_query(
+            "SELECT id, username, email, role FROM users WHERE (username = ? OR email = ?) AND password_hash = ?",
+            (username, username, password_hash)
+        )
+        
+        if user_data:
+            user_id, username, email, role = user_data[0]
+            
+            # HASH TABLE: Store user session data
+            session['user_id'] = user_id
+            session['username'] = username
+            session['email'] = email
+            session['role'] = role
+            
+            return jsonify({
+                'success': True, 
+                'role': role,
+                'redirect': '/admin' if role == 'admin' else '/dashboard'
+            })
+        else:
+            return jsonify({'success': False, 'message': 'Invalid username/email or password'})
+    
+    return render_template('login.html')
+
+@app.route('/admin')
+def admin_dashboard():
+    if 'user_id' not in session or session['role'] != 'admin':
+        return redirect(url_for('login'))
+    
+    return render_template('admin_dashboard.html', user=session)
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('home'))
+
+if __name__ == '__main__':
+    app.run(debug=True)

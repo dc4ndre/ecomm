@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}Login - BudolBox{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <div class="login-card">
+        <div class="login-header">
+            <i class="fas fa-user-circle"></i>
+            <h2>Login to BudolBox</h2>
+            <!-- <p>Week 3: Admin Panel Development I</p> -->
+        </div>
+        
+        <div id="loginAlerts"></div>
+        
+        <form id="loginForm" class="login-form">
+            <div class="form-group">
+                <label><i class="fas fa-user"></i> Username or Email</label>
+                <input type="text" id="username" required>
+            </div>
+            
+            <div class="form-group">
+                <label><i class="fas fa-lock"></i> Password</label>
+                <input type="password" id="password" required>
+            </div>
+            
+            <button type="submit" class="btn btn-primary" id="loginBtn">
+                <i class="fas fa-sign-in-alt"></i>
+                <span>Login</span>
+            </button>
+        </form>
+        
+        <div class="test-credentials">
+            <!-- <h4>Week 3 Test Credentials:</h4> -->
+            <div class="credentials-box">
+                <strong>Admin Access:</strong><br>
+                Username: <code>admin</code><br>
+                Password: <code>admin123</code>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Hash Table Usage: Session Management
+document.getElementById('loginForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+    const alerts = document.getElementById('loginAlerts');
+    const loginBtn = document.getElementById('loginBtn');
+    
+    loginBtn.disabled = true;
+    loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>Logging in...</span>';
+    
+    try {
+        const response = await fetch('/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                username: username,
+                password: password
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alerts.innerHTML = '<div class="alert alert-success"><i class="fas fa-check-circle"></i> Login successful! Redirecting...</div>';
+            setTimeout(() => {
+                window.location.href = result.redirect;
+            }, 1000);
+        } else {
+            alerts.innerHTML = '<div class="alert alert-error"><i class="fas fa-exclamation-circle"></i> ' + result.message + '</div>';
+        }
+    } catch (error) {
+        alerts.innerHTML = '<div class="alert alert-error"><i class="fas fa-exclamation-circle"></i> Login failed. Please try again.</div>';
+    } finally {
+        loginBtn.disabled = false;
+        loginBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> <span>Login</span>';
+    }
+});
+</script>
+{% endblock %}
