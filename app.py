@@ -6,7 +6,7 @@ import os
 from datetime import datetime
 
 app = Flask(__name__)
-app.secret_key = 'your-super-secure-secret-key-change-this-to-something-random-and-long-2024'
+app.secret_key = 'qwertyasdfghxcvbn'
 
 INSTANCE_PATH = os.path.join(os.path.dirname(__file__), 'instance')
 os.makedirs(INSTANCE_PATH, exist_ok=True)
