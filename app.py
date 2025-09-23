@@ -8,6 +8,10 @@ from datetime import datetime
 app = Flask(__name__)
 app.secret_key = 'your-super-secure-secret-key-change-this-to-something-random-and-long-2024'
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 8fd909c876e07b76a87b9bee26fac272a7694d68
 INSTANCE_PATH = os.path.join(os.path.dirname(__file__), 'instance')
 os.makedirs(INSTANCE_PATH, exist_ok=True)
 app.config['DATABASE_PATH'] = os.path.join(INSTANCE_PATH, 'ecommerce.db')
@@ -33,7 +37,7 @@ class DatabaseManager:
             )
         ''')
         
-        # Products table (basic structure for Week 2)
+        # Products table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS products (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -46,7 +50,7 @@ class DatabaseManager:
             )
         ''')
         
-        # Create default admin user
+        # default admin user
         admin_password = self.hash_password("admin123")
         cursor.execute('''
             INSERT OR IGNORE INTO users (username, email, password_hash, role)
