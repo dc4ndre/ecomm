@@ -23,5 +23,11 @@
 - admin_dashboard.html
 - update css
 
+## Week 4 Admin Panel Development II (Current)
+- add product management system for admin
+- products (Create, Read, Update, Delete)
+- admin products page with table showing products
+- peso formatting (₱1,234.56)
+- Wala pang image upload MAYBE sa Week 6-7 pa
 
 ## Development Timeline: 12 weeks
