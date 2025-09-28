@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+
+{% block title %}Products - BudolBox Admin{% endblock %}
+
+{% block navigation %}
+    <a href="/admin">Dashboard</a>
+    <a href="/admin/products">Products</a>
+    <a href="/logout">Logout ({{ user.username }})</a>
+{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <div class="admin-header">
+        <div>
+            <h1><i class="fas fa-boxes"></i> Product Management</h1>
+            <p>Manage your product listings here.</p>
+        </div>
+        <button class="btn btn-primary" id="addProductBtn">
+            <i class="fas fa-plus"></i> Add Product
+        </button>
+    </div>
+    
+    <div class="products-section">
+        <div id="loadingProducts" class="loading">Loading products...</div>
+        
+        <div class="table-container">
+            <table class="admin-table" id="productsTable" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Product Info</th>
+                        <th>Price</th>
+                        <th>Stock</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="productsTableBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+
+<div id="productModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Add New Product</h3>
+            <button class="modal-close" onclick="closeProductModal()">×</button>
+        </div>
+        <div class="modal-body">
+            <form id="productForm">
+                <div class="form-group">
+                    <label>Product Name *</label>
+                    <input type="text" id="productName" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="productDescription" rows="3"></textarea>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Price (₱) *</label>
+                        <input type="number" id="productPrice" step="0.01" min="0" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Stock *</label>
+                        <input type="number" id="productStock" min="0" required>
+                    </div>
+                </div>
+                
+                <div class="checkbox-container">
+                    <input type="checkbox" id="productActive" checked>
+                    <label for="productActive">Product is active</label>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn" onclick="closeProductModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Product</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadProducts();
+    
+    document.getElementById('addProductBtn').addEventListener('click', openProductModal);
+    document.getElementById('productForm').addEventListener('submit', handleProductSubmit);
+});
+
+async function loadProducts() {
+    const loading = document.getElementById('loadingProducts');
+    const table = document.getElementById('productsTable');
+    const tableBody = document.getElementById('productsTableBody');
+    
+    try {
+        const response = await fetch('/api/admin/products');
+        const products = await response.json();
+        
+        tableBody.innerHTML = '';
+        
+        if (products.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem;">No products found</td></tr>';
+        } else {
+            products.forEach(product => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>#${product.id}</td>
+                    <td>
+                        <strong>${product.name}</strong><br>
+                        <small>${product.description || 'No description'}</small>
+                    </td>
+                    <td><strong>${product.price_formatted}</strong></td>
+                    <td>${product.stock}</td>
+                    <td><span class="status ${product.is_active ? 'active' : 'inactive'}">${product.is_active ? 'Active' : 'Inactive'}</span></td>
+                    <td>
+                        <button class="btn btn-small" onclick="editProduct(${product.id})">Edit</button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+        
+        table.style.display = 'table';
+    } catch (error) {
+        console.error('Error loading products:', error);
+        tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: red;">Error loading products</td></tr>';
+    } finally {
+        loading.style.display = 'none';
+    }
+}
+
+function openProductModal() {
+    document.getElementById('productForm').reset();
+    document.getElementById('productActive').checked = true;
+    document.getElementById('productModal').classList.add('active');
+}
+
+function closeProductModal() {
+    document.getElementById('productModal').classList.remove('active');
+}
+
+async function handleProductSubmit(e) {
+    e.preventDefault();
+    
+    const data = {
+        name: document.getElementById('productName').value,
+        description: document.getElementById('productDescription').value,
+        price: document.getElementById('productPrice').value,
+        stock: document.getElementById('productStock').value,
+        is_active: document.getElementById('productActive').checked
+    };
+    
+    try {
+        const response = await fetch('/api/admin/products', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('Product added successfully!');
+            closeProductModal();
+            loadProducts();
+        } else {
+            alert('Error: ' + result.message);
+        }
+    } catch (error) {
+        alert('Failed to add product');
+    }
+}
+
+function editProduct(id) {
+    alert('Edit functionality coming in next iteration');
+}
+</script>
+{% endblock %}

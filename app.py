@@ -72,6 +72,15 @@ class DatabaseManager:
         conn.commit()
         conn.close()
         return result
+    
+    def execute_insert(self, query, params):
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute(query, params)
+        last_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+        return last_id
 
 # Initialize database
 db = DatabaseManager()
@@ -123,6 +132,70 @@ def admin_dashboard():
         return redirect(url_for('login'))
     
     return render_template('admin_dashboard.html', user=session)
+
+# Helper function for peso formatting
+def format_peso(amount):
+    return f"₱{amount:,.2f}"
+
+@app.template_filter('peso')
+def peso_filter(amount):
+    return format_peso(float(amount))
+
+@app.route('/api/admin/products')
+def admin_get_products():
+    if 'user_id' not in session or session['role'] != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    products = db.execute_query('''
+        SELECT p.id, p.name, p.description, p.price, p.stock, p.is_active
+        FROM products p
+        ORDER BY p.id DESC
+    ''')
+    
+    products_list = []
+    for product in products:
+        products_list.append({
+            'id': product[0],
+            'name': product[1],
+            'description': product[2],
+            'price': product[3],
+            'price_formatted': format_peso(product[3]),
+            'stock': product[4],
+            'is_active': bool(product[5])
+        })
+    
+    return jsonify(products_list)
+
+@app.route('/api/admin/products', methods=['POST'])
+def admin_add_product():
+    if 'user_id' not in session or session['role'] != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    data = request.get_json()
+    
+    try:
+        db.execute_insert('''
+            INSERT INTO products (name, description, price, stock, is_active)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (
+            data['name'],
+            data['description'],
+            float(data['price']),
+            int(data['stock']),
+            bool(data.get('is_active', True))
+        ))
+        
+        return jsonify({'success': True, 'message': 'Product added successfully'})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/admin/products')
+def admin_products():
+    if 'user_id' not in session or session['role'] != 'admin':
+        return redirect(url_for('login'))
+
+    return render_template('admin_products.html', user=session)
 
 @app.route('/logout')
 def logout():
